@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import BranchForm from "./BranchForm";
 import BranchTable from "./BranchTable";
 import BranchStats from "./BranchStats";
+import { branchAPI } from "../../api";
+import DetailModal from "./DetailModal";
 
 const connectionTypes = [
   { value: "FIBER", label: "Fiber" },
@@ -18,44 +20,75 @@ const Branches = () => {
   const [connectionFilter, setConnectionFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null); // Detail Modal
 
-  // -------------------------------
-  // Clean helper functions
-  // -------------------------------
+  // Fetch branches on mount
+  useEffect(() => {
+    fetchBranches();
+  }, []);
 
-  const handleAddBranch = (branch) => {
-    setBranches((prev) => [...prev, branch]);
-    setShowForm(false);
-    alert("Branch added successfully!");
+  const fetchBranches = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await branchAPI.getAll();
+      setBranches(data.results || data);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching branches:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddBranch = async (branch) => {
+    try {
+      const newBranch = await branchAPI.create(branch);
+      setBranches((prev) => [...prev, newBranch]);
+      setShowForm(false);
+      alert("Branch added successfully!");
+    } catch (err) {
+      alert(`Error adding branch: ${err.message}`);
+    }
   };
 
   const handleEditBranch = (branch) => setEditingBranch(branch);
 
-  const handleSaveEdit = (updatedBranch) => {
-    setBranches((prev) =>
-      prev.map((b) => (b.id === updatedBranch.id ? updatedBranch : b))
-    );
-    setEditingBranch(null);
-    alert("Branch updated successfully!");
+  const handleSaveEdit = async (updatedBranch) => {
+    try {
+      const updated = await branchAPI.update(updatedBranch.id, updatedBranch);
+      setBranches((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+      setEditingBranch(null);
+      alert("Branch updated successfully!");
+    } catch (err) {
+      alert(`Error updating branch: ${err.message}`);
+    }
   };
 
-  const handleDeleteBranch = (id) => {
+  const handleDeleteBranch = async (id) => {
     if (!window.confirm("Are you sure you want to delete this branch?")) return;
 
-    setBranches((prev) => prev.filter((b) => b.id !== id));
-    alert("Branch deleted successfully!");
+    try {
+      await branchAPI.delete(id);
+      setBranches((prev) => prev.filter((b) => b.id !== id));
+      alert("Branch deleted successfully!");
+    } catch (err) {
+      alert(`Error deleting branch: ${err.message}`);
+    }
   };
 
-  // -------------------------------
   // Filtering using useMemo (cleaner + faster)
-  // -------------------------------
   const filteredBranches = useMemo(() => {
     const lower = searchTerm.toLowerCase();
 
     return branches.filter((branch) => {
       const matchesSearch =
         branch.name?.toLowerCase().includes(lower) ||
-        branch.district?.toLowerCase().includes(lower) ||
+        branch.district_name?.toLowerCase().includes(lower) ||
         branch.service_number?.toLowerCase().includes(lower);
 
       const matchesConnection =
@@ -65,12 +98,24 @@ const Branches = () => {
     });
   }, [branches, searchTerm, connectionFilter]);
 
-  // -------------------------------
-  // Component UI
-  // -------------------------------
+  if (loading && branches.length === 0) {
+    return <div className="text-center py-8">Loading branches...</div>;
+  }
 
   return (
     <>
+      <DetailModal
+        title="Branch"
+        data={selectedBranch}
+        onClose={() => setSelectedBranch(null)}
+      />
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
       {/* Search + Filters */}
       <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
         <div className="flex flex-col md:flex-row gap-4 flex-1">
@@ -111,7 +156,7 @@ const Branches = () => {
       {(showForm || editingBranch) && (
         <BranchForm
           mode={editingBranch ? "edit" : "add"}
-          initialData={editingBranch || null}
+          initialData={editingBranch}
           onSubmit={editingBranch ? handleSaveEdit : handleAddBranch}
           onCancel={() => {
             setShowForm(false);
@@ -120,15 +165,18 @@ const Branches = () => {
         />
       )}
 
-      {/* Table */}
-      <BranchTable
-        branches={filteredBranches}
-        onEdit={handleEditBranch}
-        onDelete={handleDeleteBranch}
-      />
-
       {/* Stats */}
-      <BranchStats branches={branches} />
+      {!showForm && !editingBranch && <BranchStats branches={branches} />}
+
+      {/* Table */}
+      {!showForm && !editingBranch && (
+        <BranchTable
+          branches={filteredBranches}
+          onEdit={handleEditBranch}
+          onDelete={handleDeleteBranch}
+          onView={(branch) => setSelectedBranch(branch)}
+        />
+      )}
     </>
   );
 };

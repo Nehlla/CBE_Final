@@ -12,9 +12,10 @@ const connectionTypes = [
 const tunnelFields = Array.from({ length: 7 }, (_, i) => `tunnel_${i}`);
 
 const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
+  const [districts, setDistricts] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
-    district: "",
+    district_id: "",
     connection_type: "",
     service_number: "",
     account_number: "",
@@ -26,10 +27,25 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
     ...tunnelFields.reduce((acc, t) => ({ ...acc, [t]: "" }), {}),
   });
 
-  // Load initial data when editing
+  // Load initial data and districts
   useEffect(() => {
+    const fetchDistricts = async () => {
+      try {
+        const { districtAPI } = await import("../../api");
+        const data = await districtAPI.getAll();
+        setDistricts(data.results || data);
+      } catch (err) {
+        console.error("Error fetching districts:", err);
+      }
+    };
+    fetchDistricts();
+
     if (mode === "edit" && initialData) {
-      setFormData((prev) => ({ ...prev, ...initialData }));
+      setFormData((prev) => ({
+        ...prev,
+        ...initialData,
+        district_id: initialData.district || initialData.district_id || ""
+      }));
     }
   }, [mode, initialData]);
 
@@ -40,7 +56,12 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Ensure we send district_id
+    const submissionData = { ...formData };
+    if (!submissionData.district_id && submissionData.district) {
+      submissionData.district_id = submissionData.district;
+    }
+    onSubmit(submissionData);
   };
 
   const inputClass =
@@ -48,9 +69,8 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
 
   return (
     <div
-      className={`bg-white p-6 rounded-xl shadow-md mb-6 border ${
-        mode === "add" ? "border-purple-200" : "border-blue-200"
-      }`}
+      className={`bg-white p-6 rounded-xl shadow-md mb-6 border ${mode === "add" ? "border-purple-200" : "border-blue-200"
+        }`}
     >
       <h3 className="text-lg font-bold text-gray-800 mb-4">
         {mode === "add" ? "➕ Add New Branch" : "✏️ Edit Branch"}
@@ -60,7 +80,6 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {[
             { name: "name", label: "Branch Name *", required: true },
-            { name: "district", label: "District" },
             { name: "service_number", label: "Service Number" },
             { name: "account_number", label: "Account Number" },
             { name: "wan_address", label: "WAN Address", placeholder: "e.g., 192.168.1.1" },
@@ -82,6 +101,24 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
               />
             </div>
           ))}
+
+          {/* District Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
+            <select
+              name="district_id"
+              className={inputClass}
+              value={formData.district_id}
+              onChange={handleChange}
+            >
+              <option value="">Select District</option>
+              {districts.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.region_name ? `(${d.region_name})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Connection Type */}
           <div>
@@ -122,9 +159,8 @@ const BranchForm = ({ mode = "add", initialData = {}, onSubmit, onCancel }) => {
         <div className="flex space-x-3">
           <button
             type="submit"
-            className={`px-4 py-2 text-white rounded-lg hover:opacity-90 ${
-              mode === "add" ? "bg-green-600" : "bg-blue-600"
-            }`}
+            className={`px-4 py-2 text-white rounded-lg hover:opacity-90 ${mode === "add" ? "bg-green-600" : "bg-blue-600"
+              }`}
           >
             {mode === "add" ? "Save Branch" : "Update Branch"}
           </button>

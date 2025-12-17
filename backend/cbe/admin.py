@@ -3,7 +3,7 @@ from .models import Region, District, Branch, ContactPerson, ATM
 
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'district_count', 'created_at']
+    list_display = ['name', 'code', 'district_count']
     search_fields = ['name', 'code']
     
     def district_count(self, obj):
@@ -12,7 +12,7 @@ class RegionAdmin(admin.ModelAdmin):
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):
-    list_display = ['name', 'region', 'branch_count', 'created_at']
+    list_display = ['name', 'region', 'branch_count']
     list_filter = ['region']
     search_fields = ['name', 'region__name']
     

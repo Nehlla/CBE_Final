@@ -9,7 +9,7 @@ const connectionTypeStyles = {
   other: 'bg-gray-100 text-gray-800',
 };
 
-const BranchTable = ({ branches = [], onEdit, onDelete }) => {
+const BranchTable = ({ branches = [], onEdit, onDelete, onView }) => {
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -29,9 +29,14 @@ const BranchTable = ({ branches = [], onEdit, onDelete }) => {
               branches.map((branch) => {
                 const style = connectionTypeStyles[branch.connection_type] || connectionTypeStyles.other;
                 return (
-                  <tr key={branch.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={branch.id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => onView && onView(branch)}
+                    title="Click to view details"
+                  >
                     <td className="px-6 py-4 font-medium text-gray-900">{branch.name}</td>
-                    <td className="px-6 py-4 text-gray-600">{branch.district || '-'}</td>
+                    <td className="px-6 py-4 text-gray-600">{branch.district_name || '-'}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${style}`}>
                         {branch.connection_type || 'Not Set'}
@@ -42,14 +47,14 @@ const BranchTable = ({ branches = [], onEdit, onDelete }) => {
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => onEdit(branch)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          onClick={(e) => { e.stopPropagation(); onEdit(branch); }}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium z-10 relative"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => onDelete(branch.id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          onClick={(e) => { e.stopPropagation(); onDelete(branch.id); }}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium z-10 relative"
                         >
                           Delete
                         </button>

@@ -1,9 +1,14 @@
 # cbe_project/urls.py
 from django.contrib import admin
-from django.urls import path
-from cbe.views import home  # Import your home view
+from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home, name='home'),  # Use your home view
+    path('api/', include('cbe.urls')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
